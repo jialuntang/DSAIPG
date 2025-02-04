@@ -19,10 +19,7 @@ import java.util.List;
  * This algorithm runs in O(N^2 log N) time.
  */
 class ThreeSumQuadrithmic implements ThreeSum {
-    /**
-     * Construct a ThreeSumQuadrithmic on a.
-     * @param a a sorted array.
-     */
+    
     public ThreeSumQuadrithmic(int[] a) {
         this.a = a;
         length = a.length;
