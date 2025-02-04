@@ -21,7 +21,6 @@ import java.util.List;
 class ThreeSumQuadrithmic implements ThreeSum {
     /**
      * Construct a ThreeSumQuadrithmic on a.
-     *
      * @param a a sorted array.
      */
     public ThreeSumQuadrithmic(int[] a) {
@@ -29,17 +28,6 @@ class ThreeSumQuadrithmic implements ThreeSum {
         length = a.length;
     }
 
-    /**
-     * Retrieves an array of unique, sorted triples that represent combinations
-     * of three integers in the underlying sorted array whose sum equals zero.
-     * <p>
-     * This method iterates over all pairs of elements in the array, uses a helper
-     * method to find the third element that satisfies the condition, and returns
-     * all such combinations as distinct {@code Triple} objects sorted in natural order.
-     *
-     * @return an array of unique {@code Triple} objects representing all valid combinations
-     * of three integers in the array that sum to zero.
-     */
     public Triple[] getTriples() {
         List<Triple> triples = new ArrayList<>();
         for (int i = 0; i < length; i++)
@@ -51,19 +39,10 @@ class ThreeSumQuadrithmic implements ThreeSum {
         return triples.stream().distinct().toArray(Triple[]::new);
     }
 
-    /**
-     * Finds a "triple" consisting of three integers from the sorted array such that their sum equals zero,
-     * given two indices representing the first two elements of the triple.
-     *
-     * @param i the index of the first element in the triple.
-     * @param j the index of the second element in the triple. Must satisfy j > i.
-     * @return a {@code Triple} object representing the three integers if such a combination exists,
-     * or {@code null} if no such triple can be found.
-     */
-    Triple getTriple(int i, int j) {
-        // TO BE IMPLEMENTED  : use binary search to find the third element
-        // END SOLUTION
-        return null;
+    public Triple getTriple(int i, int j) {
+        int index = Arrays.binarySearch(a, -a[i] - a[j]);
+        if (index >= 0 && index > j) return new Triple(a[i], a[j], a[index]);
+        else return null;
     }
 
     private final int[] a;
