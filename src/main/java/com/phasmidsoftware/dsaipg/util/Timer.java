@@ -1,7 +1,3 @@
-/*
- * Copyright (c) 2024. Robin Hillyard
- */
-
 package com.phasmidsoftware.dsaipg.util;
 
 import java.util.function.Consumer;
@@ -9,20 +5,20 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
-/**
- * Class which is able to time the running of functions.
- */
 public class Timer {
 
     /**
-     * Run the given function n times, once per "lap" and then return the result of calling meanLapTime().
-     * The clock will be running when the method is invoked and when it is quit.
-     * <p>
-     * This is the simplest form of repeat.
+     * Construct a new Timer and set it running.
+     */
+    public Timer() {
+        resume();
+    }
+
+    /**
+     * Run the given function n times, once per "lap" and then return the result of calling stop().
      *
      * @param n        the number of repetitions.
-     * @param function a function which yields a T.
-     * @param <T>      the type supplied by function (amy be Void).
+     * @param function a function which yields a T (T may be Void).
      * @return the average milliseconds per repetition.
      */
     public <T> double repeat(int n, Supplier<T> function) {
@@ -37,54 +33,44 @@ public class Timer {
     }
 
     /**
-     * Run the given functions n times, once per "lap" and then return the mean lap time.
+     * Run the given functions n times, once per "lap" and then return the result of calling stop().
      *
      * @param n        the number of repetitions.
      * @param supplier a function which supplies a different T value for each repetition.
-     * @param function a function T=>U and which is to be timed.
-     * @param <T>      the type which is supplied by supplier and passed in to function.
-     * @param <U>      the type which is the result of <code>function</code> (may be Void).
+     * @param function a function T=>U and which is to be timed (U may be Void).
      * @return the average milliseconds per repetition.
      */
     public <T, U> double repeat(int n, Supplier<T> supplier, Function<T, U> function) {
-        return repeat(n, false, supplier, function, null, null);
+        return repeat(n, supplier, function, null, null);
     }
 
     /**
-     * Pause (without counting a lap); run the given functions n times while being timed, i.e., once per "lap", and finally return the result of calling meanLapTime().
+     * Pause (without counting a lap); run the given functions n times while being timed, i.e. once per "lap", and finally return the result of calling meanLapTime().
      *
      * @param n            the number of repetitions.
-     * @param warmup       true if this is in the warmup phase.
      * @param supplier     a function which supplies a T value.
      * @param function     a function T=>U and which is to be timed.
-     * @param preFunction  a function which pre-processes a T value and which precedes the call of function, but which is not timed (may be null). The result of the preFunction, if any, is also a T.
+     * @param preFunction  a function which pre-processes a T value and which precedes the call of function, but which is not timed (may be null).
      * @param postFunction a function which consumes a U and which succeeds the call of function, but which is not timed (may be null).
-     * @param <T>          the type which is supplied by supplier, processed by prefunction (if any), and passed in to function.
-     * @param <U>          the type which is the result of function and the input to postFunction (if any).
      * @return the average milliseconds per repetition.
      */
-    public <T, U> double repeat(int n, boolean warmup, Supplier<T> supplier, Function<T, U> function, UnaryOperator<T> preFunction, Consumer<U> postFunction) {
-        // TO BE IMPLEMENTED : note that the timer is running when this method is called and should still be running when it returns.
-         return 0;
-        // END SOLUTION
-    }
-
-    /**
-     * Updates the status display by printing progress markers or a decrement value based on the input parameters.
-     * Used for visual feedback during processes that involve incremental progress.
-     *
-     * @param lastx the previous state or value of x being tracked.
-     * @param x     the current state or value of x being tracked; must remain constant within this method's execution.
-     * @return the updated current value of x.
-     */
-    private static int doPrintStatus(int lastx, final int x) {
-        if (x != lastx) {
-            if (x % 10 == 0)
-                System.out.print(10 - x / 10);
-            else
-                System.out.print(".");
+    public <T, U> double repeat(int n, Supplier<T> supp, Function<T, U> func, UnaryOperator<T> preFunction, Consumer<U> postFunction) {
+        logger.trace("repeat: with " + n + " runs");
+        // FIXME: note that the timer is running when this method is called and should still be running when it returns. by replacing the following code
+        pause();
+        for (int i = 0; i < n; i++) {
+            T t = supp.get();
+            T t1 = preFunction != null ? preFunction.apply(t) : t;
+            resume();
+            U u = func.apply(t1);
+            pauseAndLap();
+            if (postFunction != null) postFunction.accept(u);
         }
-        return x;
+        final double result = meanLapTime();
+        resume();
+        return result;
+
+        // END
     }
 
     /**
@@ -95,7 +81,6 @@ public class Timer {
      */
     public double stop() {
         pauseAndLap();
-        doTrace(() -> "stop timer");
         return meanLapTime();
     }
 
@@ -120,7 +105,6 @@ public class Timer {
         lap();
         ticks += getClock();
         running = false;
-        doTrace(() -> "pause timer and lap after millisecs: " + ticks * 1.0E-6);
     }
 
     /**
@@ -131,7 +115,6 @@ public class Timer {
     public void resume() {
         if (running) throw new TimerException();
         ticks -= getClock();
-        doTrace(() -> "resume timer");
         running = true;
     }
 
@@ -144,7 +127,6 @@ public class Timer {
     public void lap() {
         if (!running) throw new TimerException();
         laps++;
-        doTrace(() -> "lap " + laps);
     }
 
     /**
@@ -156,7 +138,6 @@ public class Timer {
     public void pause() {
         pauseAndLap();
         laps--;
-        doTrace(() -> "pause timer");
     }
 
     /**
@@ -179,52 +160,20 @@ public class Timer {
                 '}';
     }
 
-    /**
-     * Construct a new Timer and set it running.
-     */
-    public Timer() {
-        Supplier<String> f = () -> "create new timer";
-        doTrace(f);
-        resume();
-    }
-
-    private static <T> void doTrace(final boolean condition, Supplier<String> messageFunction) {
-        if (logger.isTraceEnabled() && condition) logger.trace(messageFunction.get());
-    }
-
-    private static void doTrace(Supplier<String> f) {
-        doTrace(true, f);
-    }
-
     private long ticks = 0L;
     private int laps = 0;
     private boolean running = false;
 
-    /**
-     * Retrieves the current number of ticks recorded by the Timer.
-     *
-     * @return the number of ticks stored in the Timer.
-     */
     // NOTE: Used by unit tests
     private long getTicks() {
         return ticks;
     }
 
-    /**
-     * Retrieves the current number of laps recorded by the Timer.
-     *
-     * @return the number of laps stored in the Timer.
-     */
     // NOTE: Used by unit tests
     private int getLaps() {
         return laps;
     }
 
-    /**
-     * Determines if the Timer is currently running.
-     *
-     * @return true if the Timer is running, false otherwise.
-     */
     // NOTE: Used by unit tests
     private boolean isRunning() {
         return running;
@@ -239,9 +188,10 @@ public class Timer {
      * @return the number of ticks for the system clock. Currently defined as nano time.
      */
     private static long getClock() {
-        // TO BE IMPLEMENTED 
-         return 0;
-        // END SOLUTION
+        // FIXME by replacing the following code
+        return System.nanoTime();
+        //return 0;
+        // END
     }
 
     /**
@@ -252,21 +202,13 @@ public class Timer {
      * @return the corresponding number of milliseconds.
      */
     private static double toMillisecs(long ticks) {
-        // TO BE IMPLEMENTED 
-         return 0;
-        // END SOLUTION
+        // FIXME by replacing the following code
+        return TimeUnit.NANOSECONDS.toMillis(ticks);
+        // END
     }
 
     final static LazyLogger logger = new LazyLogger(Timer.class);
 
-    /**
-     * TimerException is a custom unchecked exception used to indicate errors or invalid states
-     * specifically related to operations on the Timer class.
-     * <p>
-     * This exception is thrown by methods in the Timer class when an operation is
-     * performed under circumstances that violate expected behavior, such as attempting
-     * to stop a timer that is not running or resuming a timer that is already active.
-     */
     static class TimerException extends RuntimeException {
         public TimerException() {
         }
